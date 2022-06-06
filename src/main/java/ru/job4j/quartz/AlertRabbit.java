@@ -18,7 +18,7 @@ public class AlertRabbit {
             scheduler.start();
             JobDetail job = newJob(Rabbit.class).build();
             SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(getPeriod())
+                    .withIntervalInSeconds(Integer.parseInt(loadedProperties().getProperty("rabbit.interval")))
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
@@ -30,16 +30,14 @@ public class AlertRabbit {
         }
     }
 
-    public static int getPeriod() {
-        Integer period = null;
+    public static Properties loadedProperties() {
         Properties properties = new Properties();
         try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
             properties.load(in);
-        period = Integer.valueOf(properties.getProperty("rabbit.interval"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return period;
+        return properties;
     }
 
     public static class Rabbit implements Job {

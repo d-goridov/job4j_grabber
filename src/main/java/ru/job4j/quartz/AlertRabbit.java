@@ -62,9 +62,8 @@ public class AlertRabbit {
         public void execute(JobExecutionContext context) throws JobExecutionException {
             System.out.println("Rabbit runs here ...");
             String sql = "insert into rabbit(created_date) values(?)";
-            try {
-                Connection connection =  (Connection) context.getJobDetail().getJobDataMap().get("connection");
-                PreparedStatement statement = connection.prepareStatement(sql);
+            Connection connection = (Connection) context.getJobDetail().getJobDataMap().get("connection");
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
                 statement.execute();
             } catch (Exception e) {

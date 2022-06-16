@@ -12,6 +12,12 @@ import java.io.IOException;
         private static final String SOURCE_LINK = "https://career.habr.com";
         private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
 
+        private String retrieveDescription(String link) throws IOException {
+            Document document = Jsoup.connect(link).get();
+            Elements element = document.select(".style-ugc");
+            return element.text();
+        }
+
         public static void main(String[] args) throws IOException {
             for (int i = 1; i <= 5; i++) {
                 Connection connection = Jsoup.connect(PAGE_LINK + i);

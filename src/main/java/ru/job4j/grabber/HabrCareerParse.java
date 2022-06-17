@@ -16,6 +16,7 @@ public class HabrCareerParse implements Parse {
     private static final String SOURCE_LINK = "https://career.habr.com";
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
     private final DateTimeParser dateTimeParser;
+    private final static int COUNT_PAGE = 5;
 
     public HabrCareerParse(DateTimeParser dateTimeParser) {
         this.dateTimeParser = dateTimeParser;
@@ -27,37 +28,44 @@ public class HabrCareerParse implements Parse {
         return element.text();
     }
 
-    @Override
-    public List<Post> list(String link) throws IOException {
-        List<Post> list = new ArrayList<>();
-        Document document = Jsoup.connect(link).get();
-        Elements rows = document.select(".vacancy-card__inner");
-        rows.forEach(row -> {
-            Element titleElement = row.select(".vacancy-card__title").first();
-            Element linkElement = titleElement.child(0);
-            Element dateElement = row.select(".vacancy-card__date").first().child(0);
-            String title = titleElement.text();
-            String linkVacancy = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-            String description = "";
-            try {
-                description = retrieveDescription(linkVacancy);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    private Post parsePost(Element row) {
+        Element titleElement = row.select(".vacancy-card__title").first();
+        Element linkElement = titleElement.child(0);
+        Element dateElement = row.select(".vacancy-card__date").first().child(0);
+        String title = titleElement.text();
+        String linkVacancy = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
+        String description;
+        try {
+            description = retrieveDescription(linkVacancy);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Wrong format link vacancy");
+        }
 
-            LocalDateTime dateTime = new HabrCareerDateTimeParser().parse(dateElement.attr("datetime"));
-            Post post = new Post(title, linkVacancy, description, dateTime);
-            list.add(post);
-        });
+        LocalDateTime dateTime = dateTimeParser.parse(dateElement.attr("datetime"));
+        return new Post(title, linkVacancy, description, dateTime);
+    }
+
+    @Override
+    public List<Post> list(String link) {
+        List<Post> list = new ArrayList<>();
+        Document document;
+        for (int i = 1; i <= COUNT_PAGE; i++) {
+            try {
+                document = Jsoup.connect(link + i).get();
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Wrong link page format");
+            }
+            Elements rows = document.select(".vacancy-card__inner");
+            rows.forEach(row -> list.add(parsePost(row)));
+        }
         return list;
     }
 
-    public static void main(String[] args) throws IOException {
-        HabrCareerDateTimeParser dateParser = new HabrCareerDateTimeParser();
-        HabrCareerParse careerParse = new HabrCareerParse(dateParser);
-        for (Post post : careerParse.list(PAGE_LINK)) {
-            System.out.println(post);
-        }
+
+
+    public static void main(String[] args) {
+        HabrCareerParse h1 = new HabrCareerParse(new HabrCareerDateTimeParser());
+        System.out.println(h1.list(PAGE_LINK));
     }
 }
 
